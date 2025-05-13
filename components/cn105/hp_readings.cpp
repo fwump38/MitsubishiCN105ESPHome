@@ -259,7 +259,8 @@ void CN105Climate::getRoomTemperatureFromResponsePacket() {
     ESP_LOGD("Decoder", "[OAT  °C: %f]", receivedStatus.outsideAirTemperature);
 
     // no change with this packet to currentStatus for operating and compressorFrequency
-    receivedStatus.operating = currentStatus.operating;
+    // receivedStatus.operating = currentStatus.operating;
+    receivedStatus.operating = this->is_operating();
     receivedStatus.compressorFrequency = currentStatus.compressorFrequency;
     receivedStatus.inputPower = currentStatus.inputPower;
     receivedStatus.kWh = currentStatus.kWh;
@@ -284,7 +285,8 @@ void CN105Climate::getOperatingAndCompressorFreqFromResponsePacket() {
 
     // reset counter (because a reply indicates it is connected)
     this->nonResponseCounter = 0;
-    receivedStatus.operating = data[4];
+    // receivedStatus.operating = data[4];
+    receivedStatus.operating = this->is_operating();
     receivedStatus.compressorFrequency = data[3];
     receivedStatus.inputPower = (data[5] << 8) | data[6];
     receivedStatus.kWh = float((data[7] << 8) | data[8]) / 10;
