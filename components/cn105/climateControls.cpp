@@ -211,7 +211,11 @@ void CN105Climate::controlMode() {
 
 void CN105Climate::setActionIfOperatingTo(climate::ClimateAction action) {
     if (currentStatus.operating) {
-        this->action = action;
+        if (this->currentSettings.stage && strcmp(this->currentSettings.stage, "IDLE") != 0) {
+            this->action = action;
+        } else {
+            this->action = climate::CLIMATE_ACTION_IDLE;
+        }
     } else {
         this->action = climate::CLIMATE_ACTION_IDLE;
     }
