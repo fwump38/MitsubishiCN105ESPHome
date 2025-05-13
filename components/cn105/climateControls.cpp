@@ -217,33 +217,15 @@ void CN105Climate::setActionIfOperatingTo(climate::ClimateAction action) {
     }
     ESP_LOGD(TAG, "setting action to -> %d", this->action);
 }
-/**
- * Thanks to Bascht74 on issu #9 we know that the compressor frequency is not a good indicator of the heatpump being in operation
- * Because one can have multiple inside module for a single compressor.
- * Also, some heatpump does not support compressor frequency.
- * SO usage is deprecated.
-*/
-void CN105Climate::setActionIfOperatingAndCompressorIsActiveTo(climate::ClimateAction action) {
-
-    ESP_LOGW(TAG, "Warning: the use of compressor frequency as an active indicator is deprecated. Please use operating status instead.");
-
-    if (currentStatus.compressorFrequency <= 0) {
-        this->action = climate::CLIMATE_ACTION_IDLE;
-    } else {
-        this->setActionIfOperatingTo(action);
-    }
-}
 
 //inside the below we could implement an internal only HEAT_COOL doing the math with an offset or something
 void CN105Climate::updateAction() {
     ESP_LOGV(TAG, "updating action back to espHome...");
     switch (this->mode) {
-    case climate::CLIMATE_MODE_HEAT:
-        //this->setActionIfOperatingAndCompressorIsActiveTo(climate::CLIMATE_ACTION_HEATING);       
+    case climate::CLIMATE_MODE_HEAT:    
         this->setActionIfOperatingTo(climate::CLIMATE_ACTION_HEATING);
         break;
     case climate::CLIMATE_MODE_COOL:
-        //this->setActionIfOperatingAndCompressorIsActiveTo(climate::CLIMATE_ACTION_COOLING);
         this->setActionIfOperatingTo(climate::CLIMATE_ACTION_COOLING);
         break;
     case climate::CLIMATE_MODE_AUTO:
@@ -278,7 +260,6 @@ void CN105Climate::updateAction() {
         break;
 
     case climate::CLIMATE_MODE_DRY:
-        //this->setActionIfOperatingAndCompressorIsActiveTo(climate::CLIMATE_ACTION_DRYING);
         this->setActionIfOperatingTo(climate::CLIMATE_ACTION_DRYING);
         break;
     case climate::CLIMATE_MODE_FAN_ONLY:
