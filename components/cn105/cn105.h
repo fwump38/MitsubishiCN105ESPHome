@@ -275,7 +275,6 @@ private:
     //void statusChanged();
     void updateAction();
     void setActionIfOperatingTo(climate::ClimateAction action);
-    void setActionIfOperatingAndCompressorIsActiveTo(climate::ClimateAction action);
     void hpPacketDebug(uint8_t* packet, unsigned int length, const char* packetDirection);
 
     void debugSettings(const char* settingName, heatpumpSettings& settings);
