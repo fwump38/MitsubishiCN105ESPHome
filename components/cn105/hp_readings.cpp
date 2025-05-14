@@ -158,9 +158,6 @@ void CN105Climate::getPowerFromResponsePacket() {
     ESP_LOGD("Decoder", "[Sub Mode  : %s]", receivedSettings.sub_mode);
     ESP_LOGD("Decoder", "[Auto Mode Sub Mode  : %s]", receivedSettings.auto_sub_mode);
 
-    // Store the stage in the current settings
-    this->currentSettings.stage = receivedSettings.stage;
-
     if (this->Stage_sensor_ != nullptr && (!this->currentSettings.stage || strcmp(receivedSettings.stage, this->currentSettings.stage) != 0)) {
         this->Stage_sensor_->publish_state(receivedSettings.stage);
     }
@@ -170,6 +167,17 @@ void CN105Climate::getPowerFromResponsePacket() {
     if (this->Auto_sub_mode_sensor_ != nullptr && (!this->currentSettings.auto_sub_mode || strcmp(receivedSettings.auto_sub_mode, this->currentSettings.auto_sub_mode) != 0)) {
         this->Auto_sub_mode_sensor_->publish_state(receivedSettings.auto_sub_mode);
     }
+
+    // Finalize the operating status based on the stage
+    if (strcmp(receivedSettings.stage, "IDLE") == 0) {
+        pendingStatus_.operating = false;  // Not operating
+    } else {
+        pendingStatus_.operating = true;   // Operating
+    }
+
+    // Update the current status with the finalized values
+    this->statusChanged(pendingStatus_);
+
 }
 
 void CN105Climate::getSettingsFromResponsePacket() {
@@ -282,30 +290,18 @@ void CN105Climate::getOperatingAndCompressorFreqFromResponsePacket() {
     //this->last_received_packet_sensor->publish_state("0x62-> 0x06: Data -> Heatpump Status");
     // Reset counter (because a reply indicates it is connected)
     this->nonResponseCounter = 0;
+    // Parse the status packet
+    pendingStatus_.operating = data[4];
+    pendingStatus_.compressorFrequency = data[3];
+    pendingStatus_.inputPower = (data[5] << 8) | data[6];
+    pendingStatus_.kWh = float((data[7] << 8) | data[8]) / 10;
 
-    // Parse the default values from the packet
-    receivedStatus.operating = data[4];
-    receivedStatus.compressorFrequency = data[3];
-    receivedStatus.inputPower = (data[5] << 8) | data[6];
-    receivedStatus.kWh = float((data[7] << 8) | data[8]) / 10;
+    // Preserve other fields from the current status
+    pendingStatus_.roomTemperature = currentStatus.roomTemperature;
+    pendingStatus_.outsideAirTemperature = currentStatus.outsideAirTemperature;
+    pendingStatus_.runtimeHours = currentStatus.runtimeHours;
 
-    // Override `operating` status based on `stage`
-    if (this->currentSettings.stage != nullptr && strcmp(this->currentSettings.stage, "IDLE") == 0) {
-        receivedStatus.operating = false; // Not operating
-    } else {
-        receivedStatus.operating = true; // Operating
-    }
-
-    // Log the overridden operating status
-    ESP_LOGD("Decoder", "Overridden operating status based on stage: %d (stage: %s)", receivedStatus.operating, this->currentSettings.stage);
-
-    // No change with this packet to roomTemperature
-    receivedStatus.roomTemperature = currentStatus.roomTemperature;
-    receivedStatus.outsideAirTemperature = currentStatus.outsideAirTemperature;
-    receivedStatus.runtimeHours = currentStatus.runtimeHours;
-
-    // Update the status
-    this->statusChanged(receivedStatus);
+    ESP_LOGD("Decoder", "Stored intermediate status from 0x06 packet");
 }
 
 void CN105Climate::terminateCycle() {
