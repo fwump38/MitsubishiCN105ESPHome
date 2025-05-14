@@ -103,11 +103,7 @@ float CN105Climate::get_runtime_hours() {
     return currentStatus.runtimeHours;
 }
 bool CN105Climate::is_operating() {
-    // Use the stage to determine if the heat pump is operating
-    if (this->currentSettings.stage && strcmp(this->currentSettings.stage, "IDLE") != 0) {
-        return true;
-    }
-    return false;
+    return currentStatus.operating;
 }
 
 
