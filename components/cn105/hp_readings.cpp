@@ -166,7 +166,8 @@ void CN105Climate::getPowerFromResponsePacket() {
     } else {
         receivedStatus.operating = false;
     }
-    publish_state(receivedStatus.operating);
+    // Update status
+    this->statusChanged(receivedStatus);
 
     //this->heatpumpUpdate(receivedSettings);
     if (this->Stage_sensor_ != nullptr && (!this->currentSettings.stage || strcmp(receivedSettings.stage, this->currentSettings.stage) != 0)) {
@@ -342,7 +343,7 @@ void CN105Climate::getDataFromResponsePacket() {
                 ESP_LOGW(LOG_CYCLE_TAG, "power request (0x09) disabled (not supported)");
             }
             // in this case, the cycle ends up now
-            this->processBufferedPackets();
+            this->terminateCycle();
         }
         break;
 
