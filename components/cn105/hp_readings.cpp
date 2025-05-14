@@ -471,9 +471,9 @@ void CN105Climate::statusChanged(heatpumpStatus status) {
         // this->currentStatus.inputPower = status.inputPower;
         // this->currentStatus.kWh = status.kWh;
         // this->currentStatus.runtimeHours = status.runtimeHours;
-        // this->currentStatus.roomTemperature = status.roomTemperature;
+        this->currentStatus.roomTemperature = status.roomTemperature;
         // this->currentStatus.outsideAirTemperature = status.outsideAirTemperature;
-        // this->current_temperature = currentStatus.roomTemperature;
+        this->current_temperature = currentStatus.roomTemperature;
 
         this->updateAction();       // update action info on HA climate component
         this->publish_state();
