@@ -165,8 +165,8 @@ void CN105Climate::getPowerFromResponsePacket() {
     } else {
         this->heatpumpOperating = false;
     }
-    // Update status
-    this->statusChanged(receivedStatus);
+    // Update action
+    this->updateAction();
 
     //this->heatpumpUpdate(receivedSettings);
     if (this->Stage_sensor_ != nullptr && (!this->currentSettings.stage || strcmp(receivedSettings.stage, this->currentSettings.stage) != 0)) {
