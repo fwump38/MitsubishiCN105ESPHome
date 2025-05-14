@@ -29,6 +29,13 @@ namespace esphome {
 void log_info_uint32(const char* tag, const char* msg, uint32_t value, const char* suffix = "");
 void log_debug_uint32(const char* tag, const char* msg, uint32_t value, const char* suffix = "");
 
+struct PacketBuffer {
+    bool status_received = false;
+    bool power_received = false;
+    heatpumpStatus temp_status;
+    heatpumpSettings temp_settings;
+};
+
 class CN105Climate : public climate::Climate, public Component, public uart::UARTDevice {
 
     //friend class VaneOrientationSelect;
@@ -283,6 +290,8 @@ private:
     void debugStatus(const char* statusName, heatpumpStatus status);
     void debugSettingsAndStatus(const char* settingName, heatpumpSettings settings, heatpumpStatus status);
     void debugClimate(const char* settingName);
+    PacketBuffer packet_buffer_; // Buffer to store packet data
+    void processBufferedPackets(); // New method to process buffered packets
 
 #ifndef USE_ESP32
     void emulateMutex(const char* retryName, std::function<void()>&& f);

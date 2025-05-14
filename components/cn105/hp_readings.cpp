@@ -293,7 +293,7 @@ void CN105Climate::getOperatingAndCompressorFreqFromResponsePacket() {
     receivedStatus.roomTemperature = currentStatus.roomTemperature;
     receivedStatus.outsideAirTemperature = currentStatus.outsideAirTemperature;
     receivedStatus.runtimeHours = currentStatus.runtimeHours;
-    this->statusChanged(receivedStatus);
+    // this->statusChanged(receivedStatus);
 }
 
 void CN105Climate::terminateCycle() {
@@ -320,9 +320,9 @@ void CN105Climate::getDataFromResponsePacket() {
     case 0x02:             /* setting information */
         ESP_LOGD(LOG_CYCLE_TAG, "2b: Receiving settings response");
         this->getSettingsFromResponsePacket();
-        // next step is to get the room temperature case 0x03
-        ESP_LOGD(LOG_CYCLE_TAG, "3a: Sending room °C request (0x03)");
-        this->buildAndSendRequestPacket(RQST_PKT_ROOM_TEMP);
+        // Skip room temperature request and directly proceed to status request
+        ESP_LOGD(LOG_CYCLE_TAG, "3a: Skipping room °C request, sending status request (0x06)");
+        this->buildAndSendRequestPacket(RQST_PKT_STATUS);
         break;
 
     case 0x03:
@@ -351,6 +351,10 @@ void CN105Climate::getDataFromResponsePacket() {
         ESP_LOGD(LOG_CYCLE_TAG, "4b: Receiving status response");
         this->getOperatingAndCompressorFreqFromResponsePacket();
 
+        // Save status data to the buffer
+        this->packet_buffer_.status_received = true;
+        this->packet_buffer_.temp_status = this->currentStatus;
+
         if (this->powerRequestWithoutResponses < 3) {         // if more than 3 requests are without reponse, we desactivate the power request (0x09)
             ESP_LOGD(LOG_CYCLE_TAG, "5a: Sending power request (0x09)");
             this->buildAndSendRequestPacket(RQST_PKT_STANDBY);
@@ -361,7 +365,7 @@ void CN105Climate::getDataFromResponsePacket() {
                 ESP_LOGW(LOG_CYCLE_TAG, "power request (0x09) disabled (not supported)");
             }
             // in this case, the cycle ends up now
-            this->terminateCycle();
+            this->processBufferedPackets();
         }
         break;
 
@@ -369,11 +373,16 @@ void CN105Climate::getDataFromResponsePacket() {
         /* Power */
         ESP_LOGD(LOG_CYCLE_TAG, "5b: Receiving Power/Standby response");
         this->getPowerFromResponsePacket();
+
+        // Save power data to the buffer
+        this->packet_buffer_.power_received = true;
+        this->packet_buffer_.temp_settings = this->currentSettings;
+
         //FC 62 01 30 10 09 00 00 00 02 02 00 00 00 00 00 00 00 00 00 00 50
         // reset the powerRequestWithoutResponses to 0 as we had a response
         this->powerRequestWithoutResponses = 0;
 
-        this->terminateCycle();
+        this->processBufferedPackets();
         break;
 
     case 0x10:
@@ -683,4 +692,25 @@ void CN105Climate::checkPowerAndModeSettings(heatpumpSettings& settings, bool up
             this->mode = climate::CLIMATE_MODE_OFF;
         }
     }
+}
+
+void CN105Climate::processBufferedPackets() {
+    if (this->packet_buffer_.status_received && this->packet_buffer_.power_received) {
+        ESP_LOGD(TAG, "Processing buffered packets...");
+
+        // Determine operating status based on stage
+        if (strcmp(this->packet_buffer_.temp_settings.stage, "IDLE") == 0) {
+            this->packet_buffer_.temp_status.operating = false;
+        } else {
+            this->packet_buffer_.temp_status.operating = true;
+        }
+
+        // Update current status
+        this->statusChanged(this->packet_buffer_.temp_status);
+
+        // Reset the buffer for the next cycle
+        this->packet_buffer_.status_received = false;
+        this->packet_buffer_.power_received = false;
+    }
+    this->terminateCycle();
 }
