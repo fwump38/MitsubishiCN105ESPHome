@@ -325,8 +325,9 @@ private:
     uint8_t* data;
 
     // initialise to all off, then it will update shortly after connect;
-    heatpumpStatus currentStatus{ 0, 0, false, {TIMER_MODE_MAP[0], 0, 0, 0, 0}, 0, 0, 0, 0 };
+    heatpumpStatus currentStatus{ 0, 0, {TIMER_MODE_MAP[0], 0, 0, 0, 0}, 0, 0, 0, 0 };
     heatpumpFunctions functions;
+    bool heatpumpOperating = false;
 
     bool tempMode = false;
     bool wideVaneAdj;

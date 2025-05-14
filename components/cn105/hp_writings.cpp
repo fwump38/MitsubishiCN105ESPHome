@@ -50,7 +50,6 @@ void CN105Climate::sendFirstConnectionPacket() {
 //     this->current_temperature = currentStatus.roomTemperature;
 
 //     ESP_LOGD(TAG, "t°: %f", currentStatus.roomTemperature);
-//     ESP_LOGD(TAG, "operating: %d", currentStatus.operating);
 //     ESP_LOGD(TAG, "compressor freq: %f", currentStatus.compressorFrequency);
 
 //     this->updateAction();

@@ -210,7 +210,7 @@ void CN105Climate::controlMode() {
 
 
 void CN105Climate::setActionIfOperatingTo(climate::ClimateAction action) {
-    if (currentStatus.operating) {
+    if (this->heatpumpOperating) {
         this->action = action;
     } else {
         this->action = climate::CLIMATE_ACTION_IDLE;

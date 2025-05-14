@@ -25,7 +25,6 @@ CN105Climate::CN105Climate(uart::UARTComponent* uart) :
     this->lastSend = 0;
     this->infoMode = 0;
     this->lastConnectRqTimeMs = 0;
-    this->currentStatus.operating = false;
     this->currentStatus.compressorFrequency = NAN;
     this->currentStatus.inputPower = NAN;
     this->currentStatus.kWh = NAN;
@@ -103,7 +102,7 @@ float CN105Climate::get_runtime_hours() {
     return currentStatus.runtimeHours;
 }
 bool CN105Climate::is_operating() {
-    return currentStatus.operating;
+    return this->heatpumpOperating;
 }
 
 

@@ -127,16 +127,14 @@ void CN105Climate::debugSettings(const char* settingName, heatpumpSettings& sett
 
 void CN105Climate::debugStatus(const char* statusName, heatpumpStatus status) {
 #ifdef USE_ESP32
-    ESP_LOGI(LOG_STATUS_TAG, "[%s]-> [room C°: %.1f, operating: %s, compressor freq: %.1f Hz]",
+    ESP_LOGI(LOG_STATUS_TAG, "[%s]-> [room C°: %.1f, compressor freq: %.1f Hz]",
         statusName,
         status.roomTemperature,
-        status.operating ? "YES" : "NO ",
         status.compressorFrequency);
 #else
-    ESP_LOGI(LOG_STATUS_TAG, "[%-*s]-> [room C°: %.1f, operating: %-*s, compressor freq: %.1f Hz]",
+    ESP_LOGI(LOG_STATUS_TAG, "[%-*s]-> [room C°: %.1f, compressor freq: %.1f Hz]",
         15, statusName,
         status.roomTemperature,
-        3, status.operating ? "YES" : "NO ",
         status.compressorFrequency);
 #endif
 }

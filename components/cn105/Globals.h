@@ -247,7 +247,6 @@ struct heatpumpTimers {
 struct heatpumpStatus {
     float roomTemperature;
     float outsideAirTemperature;
-    bool operating; // if true, the heatpump is operating to reach the desired temperature
     heatpumpTimers timers;
     float compressorFrequency;
     float inputPower;
@@ -257,7 +256,6 @@ struct heatpumpStatus {
     bool operator==(const heatpumpStatus& other) const {
         return (std::isnan(roomTemperature) ? std::isnan(other.roomTemperature) : roomTemperature == other.roomTemperature) &&
             (std::isnan(outsideAirTemperature) ? std::isnan(other.outsideAirTemperature) : outsideAirTemperature == other.outsideAirTemperature) &&
-            operating == other.operating &&
             //timers == other.timers &&  // Assurez-vous que l'opérateur == est également défini pour heatpumpTimers
             compressorFrequency == other.compressorFrequency &&
             inputPower == other.inputPower &&

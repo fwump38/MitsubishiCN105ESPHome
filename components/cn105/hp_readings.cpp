@@ -159,12 +159,11 @@ void CN105Climate::getPowerFromResponsePacket() {
     ESP_LOGD("Decoder", "[Auto Mode Sub Mode  : %s]", receivedSettings.auto_sub_mode);
 
     // Set status
-    heatpumpStatus receivedStatus{};
     // If stage is not "IDLE", then the heatpump is operating
     if (strcmp(receivedSettings.stage, "IDLE") != 0) {
-        receivedStatus.operating = true;
+        this->heatpumpOperating = true;
     } else {
-        receivedStatus.operating = false;
+        this->heatpumpOperating = false;
     }
     // Update status
     this->statusChanged(receivedStatus);
@@ -270,7 +269,6 @@ void CN105Climate::getRoomTemperatureFromResponsePacket() {
     ESP_LOGD("Decoder", "[OAT  °C: %f]", receivedStatus.outsideAirTemperature);
 
     // no change with this packet to currentStatus for operating and compressorFrequency
-    receivedStatus.operating = currentStatus.operating;
     receivedStatus.compressorFrequency = currentStatus.compressorFrequency;
     receivedStatus.inputPower = currentStatus.inputPower;
     receivedStatus.kWh = currentStatus.kWh;
@@ -295,7 +293,6 @@ void CN105Climate::getOperatingAndCompressorFreqFromResponsePacket() {
 
     // reset counter (because a reply indicates it is connected)
     this->nonResponseCounter = 0;
-    receivedStatus.operating = data[4];
     receivedStatus.compressorFrequency = data[3];
     receivedStatus.inputPower = (data[5] << 8) | data[6];
     receivedStatus.kWh = float((data[7] << 8) | data[8]) / 10;
@@ -465,12 +462,6 @@ void CN105Climate::statusChanged(heatpumpStatus status) {
         this->debugStatus("received", status);
         this->debugStatus("current", currentStatus);
 
-
-        this->currentStatus.operating = status.operating;
-        // this->currentStatus.compressorFrequency = status.compressorFrequency;
-        // this->currentStatus.inputPower = status.inputPower;
-        // this->currentStatus.kWh = status.kWh;
-        // this->currentStatus.runtimeHours = status.runtimeHours;
         this->currentStatus.roomTemperature = status.roomTemperature;
         // this->currentStatus.outsideAirTemperature = status.outsideAirTemperature;
         this->current_temperature = currentStatus.roomTemperature;
