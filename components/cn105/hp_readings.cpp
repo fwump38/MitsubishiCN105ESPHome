@@ -158,17 +158,16 @@ void CN105Climate::getPowerFromResponsePacket() {
     ESP_LOGD("Decoder", "[Sub Mode  : %s]", receivedSettings.sub_mode);
     ESP_LOGD("Decoder", "[Auto Mode Sub Mode  : %s]", receivedSettings.auto_sub_mode);
 
-    //this->heatpumpUpdate(receivedSettings);
+    // Store the stage in the current settings
+    this->currentSettings.stage = receivedSettings.stage;
+
     if (this->Stage_sensor_ != nullptr && (!this->currentSettings.stage || strcmp(receivedSettings.stage, this->currentSettings.stage) != 0)) {
-        this->currentSettings.stage = receivedSettings.stage;
         this->Stage_sensor_->publish_state(receivedSettings.stage);
     }
     if (this->Sub_mode_sensor_ != nullptr && (!this->currentSettings.sub_mode || strcmp(receivedSettings.sub_mode, this->currentSettings.sub_mode) != 0)) {
-        this->currentSettings.sub_mode = receivedSettings.sub_mode;
         this->Sub_mode_sensor_->publish_state(receivedSettings.sub_mode);
     }
     if (this->Auto_sub_mode_sensor_ != nullptr && (!this->currentSettings.auto_sub_mode || strcmp(receivedSettings.auto_sub_mode, this->currentSettings.auto_sub_mode) != 0)) {
-        this->currentSettings.auto_sub_mode = receivedSettings.auto_sub_mode;
         this->Auto_sub_mode_sensor_->publish_state(receivedSettings.auto_sub_mode);
     }
 }
@@ -281,18 +280,31 @@ void CN105Climate::getOperatingAndCompressorFreqFromResponsePacket() {
     heatpumpStatus receivedStatus{};
     ESP_LOGD("Decoder", "[0x06 is status]");
     //this->last_received_packet_sensor->publish_state("0x62-> 0x06: Data -> Heatpump Status");
-
-    // reset counter (because a reply indicates it is connected)
+    // Reset counter (because a reply indicates it is connected)
     this->nonResponseCounter = 0;
+
+    // Parse the default values from the packet
     receivedStatus.operating = data[4];
     receivedStatus.compressorFrequency = data[3];
     receivedStatus.inputPower = (data[5] << 8) | data[6];
     receivedStatus.kWh = float((data[7] << 8) | data[8]) / 10;
 
-    // no change with this packet to roomTemperature
+    // Override `operating` status based on `stage`
+    if (this->currentSettings.stage != nullptr && strcmp(this->currentSettings.stage, "IDLE") == 0) {
+        receivedStatus.operating = false; // Not operating
+    } else {
+        receivedStatus.operating = true; // Operating
+    }
+
+    // Log the overridden operating status
+    ESP_LOGD("Decoder", "Overridden operating status based on stage: %d (stage: %s)", receivedStatus.operating, this->currentSettings.stage);
+
+    // No change with this packet to roomTemperature
     receivedStatus.roomTemperature = currentStatus.roomTemperature;
     receivedStatus.outsideAirTemperature = currentStatus.outsideAirTemperature;
     receivedStatus.runtimeHours = currentStatus.runtimeHours;
+
+    // Update the status
     this->statusChanged(receivedStatus);
 }
 
