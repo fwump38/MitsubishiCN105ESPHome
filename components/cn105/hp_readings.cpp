@@ -331,8 +331,17 @@ void CN105Climate::getDataFromResponsePacket() {
     case 0x02:             /* setting information */
         ESP_LOGD(LOG_CYCLE_TAG, "2b: Receiving settings response");
         this->getSettingsFromResponsePacket();
-        // Skip room temperature request and directly proceed to status request
-        ESP_LOGD(LOG_CYCLE_TAG, "3a: Skipping room °C request");
+        // next step is to get the room temperature case 0x03
+        ESP_LOGD(LOG_CYCLE_TAG, "3a: Sending room °C request (0x03)");
+        this->buildAndSendRequestPacket(RQST_PKT_ROOM_TEMP);
+        break;
+
+    case 0x03:
+        /* room temperature reading */
+        ESP_LOGD(LOG_CYCLE_TAG, "3b: Receiving room °C response");
+        this->getRoomTemperatureFromResponsePacket();
+        // next step is to get the heatpump status (operating and compressor frequency) case 0x06
+        ESP_LOGD(LOG_CYCLE_TAG, "4a: Skipping status request (0x06)");
         if (this->powerRequestWithoutResponses < 3) {         // if more than 3 requests are without reponse, we desactivate the power request (0x09)
             ESP_LOGD(LOG_CYCLE_TAG, "5a: Sending power request (0x09)");
             this->buildAndSendRequestPacket(RQST_PKT_STANDBY);
@@ -345,15 +354,6 @@ void CN105Climate::getDataFromResponsePacket() {
             // in this case, the cycle ends up now
             this->terminateCycle();
         }
-        break;
-
-    case 0x03:
-        /* room temperature reading */
-        ESP_LOGD(LOG_CYCLE_TAG, "3b: Receiving room °C response");
-        this->getRoomTemperatureFromResponsePacket();
-        // next step is to get the heatpump status (operating and compressor frequency) case 0x06
-        ESP_LOGD(LOG_CYCLE_TAG, "4a: Sending status request (0x06)");
-        this->buildAndSendRequestPacket(RQST_PKT_STATUS);
         break;
 
     case 0x04:
