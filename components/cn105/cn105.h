@@ -325,6 +325,7 @@ private:
 
     // initialise to all off, then it will update shortly after connect;
     heatpumpStatus currentStatus{ 0, 0, false, {TIMER_MODE_MAP[0], 0, 0, 0, 0}, 0, 0, 0, 0 };
+    heatpumpStatus pendingStatus_;  // Temporary storage for status from 0x06 packet
     heatpumpFunctions functions;
 
     bool tempMode = false;
