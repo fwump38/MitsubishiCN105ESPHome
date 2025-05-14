@@ -158,6 +158,15 @@ void CN105Climate::getPowerFromResponsePacket() {
     ESP_LOGD("Decoder", "[Sub Mode  : %s]", receivedSettings.sub_mode);
     ESP_LOGD("Decoder", "[Auto Mode Sub Mode  : %s]", receivedSettings.auto_sub_mode);
 
+    // Set status
+    heatpumpStatus receivedStatus{};
+    // If stage is not "IDLE", then the heatpump is operating
+    if (strcmp(receivedSettings.stage, "IDLE") != 0) {
+        receivedStatus.operating = true;
+    } else {
+        receivedStatus.operating = false;
+    }
+
     //this->heatpumpUpdate(receivedSettings);
     if (this->Stage_sensor_ != nullptr && (!this->currentSettings.stage || strcmp(receivedSettings.stage, this->currentSettings.stage) != 0)) {
         this->currentSettings.stage = receivedSettings.stage;
@@ -321,8 +330,19 @@ void CN105Climate::getDataFromResponsePacket() {
         ESP_LOGD(LOG_CYCLE_TAG, "2b: Receiving settings response");
         this->getSettingsFromResponsePacket();
         // Skip room temperature request and directly proceed to status request
-        ESP_LOGD(LOG_CYCLE_TAG, "3a: Skipping room °C request, sending status request (0x06)");
-        this->buildAndSendRequestPacket(RQST_PKT_STATUS);
+        ESP_LOGD(LOG_CYCLE_TAG, "3a: Skipping room °C request");
+        if (this->powerRequestWithoutResponses < 3) {         // if more than 3 requests are without reponse, we desactivate the power request (0x09)
+            ESP_LOGD(LOG_CYCLE_TAG, "5a: Sending power request (0x09)");
+            this->buildAndSendRequestPacket(RQST_PKT_STANDBY);
+            this->powerRequestWithoutResponses++;
+        } else {
+            if (this->powerRequestWithoutResponses != 4) {
+                this->powerRequestWithoutResponses = 4;
+                ESP_LOGW(LOG_CYCLE_TAG, "power request (0x09) disabled (not supported)");
+            }
+            // in this case, the cycle ends up now
+            this->processBufferedPackets();
+        }
         break;
 
     case 0x03:
@@ -351,10 +371,6 @@ void CN105Climate::getDataFromResponsePacket() {
         ESP_LOGD(LOG_CYCLE_TAG, "4b: Receiving status response");
         this->getOperatingAndCompressorFreqFromResponsePacket();
 
-        // Save status data to the buffer
-        this->packet_buffer_.status_received = true;
-        this->packet_buffer_.temp_status = this->currentStatus;
-
         if (this->powerRequestWithoutResponses < 3) {         // if more than 3 requests are without reponse, we desactivate the power request (0x09)
             ESP_LOGD(LOG_CYCLE_TAG, "5a: Sending power request (0x09)");
             this->buildAndSendRequestPacket(RQST_PKT_STANDBY);
@@ -365,7 +381,7 @@ void CN105Climate::getDataFromResponsePacket() {
                 ESP_LOGW(LOG_CYCLE_TAG, "power request (0x09) disabled (not supported)");
             }
             // in this case, the cycle ends up now
-            this->processBufferedPackets();
+            this->terminateCycle();
         }
         break;
 
@@ -373,16 +389,11 @@ void CN105Climate::getDataFromResponsePacket() {
         /* Power */
         ESP_LOGD(LOG_CYCLE_TAG, "5b: Receiving Power/Standby response");
         this->getPowerFromResponsePacket();
-
-        // Save power data to the buffer
-        this->packet_buffer_.power_received = true;
-        this->packet_buffer_.temp_settings = this->currentSettings;
-
         //FC 62 01 30 10 09 00 00 00 02 02 00 00 00 00 00 00 00 00 00 00 50
         // reset the powerRequestWithoutResponses to 0 as we had a response
         this->powerRequestWithoutResponses = 0;
 
-        this->processBufferedPackets();
+        this->terminateCycle();
         break;
 
     case 0x10:
@@ -454,36 +465,36 @@ void CN105Climate::statusChanged(heatpumpStatus status) {
 
 
         this->currentStatus.operating = status.operating;
-        this->currentStatus.compressorFrequency = status.compressorFrequency;
-        this->currentStatus.inputPower = status.inputPower;
-        this->currentStatus.kWh = status.kWh;
-        this->currentStatus.runtimeHours = status.runtimeHours;
-        this->currentStatus.roomTemperature = status.roomTemperature;
-        this->currentStatus.outsideAirTemperature = status.outsideAirTemperature;
-        this->current_temperature = currentStatus.roomTemperature;
+        // this->currentStatus.compressorFrequency = status.compressorFrequency;
+        // this->currentStatus.inputPower = status.inputPower;
+        // this->currentStatus.kWh = status.kWh;
+        // this->currentStatus.runtimeHours = status.runtimeHours;
+        // this->currentStatus.roomTemperature = status.roomTemperature;
+        // this->currentStatus.outsideAirTemperature = status.outsideAirTemperature;
+        // this->current_temperature = currentStatus.roomTemperature;
 
         this->updateAction();       // update action info on HA climate component
         this->publish_state();
 
-        if (this->compressor_frequency_sensor_ != nullptr) {
-            this->compressor_frequency_sensor_->publish_state(currentStatus.compressorFrequency);
-        }
+        // if (this->compressor_frequency_sensor_ != nullptr) {
+        //     this->compressor_frequency_sensor_->publish_state(currentStatus.compressorFrequency);
+        // }
 
-        if (this->input_power_sensor_ != nullptr) {
-            this->input_power_sensor_->publish_state(currentStatus.inputPower);
-        }
+        // if (this->input_power_sensor_ != nullptr) {
+        //     this->input_power_sensor_->publish_state(currentStatus.inputPower);
+        // }
 
-        if (this->kwh_sensor_ != nullptr) {
-            this->kwh_sensor_->publish_state(currentStatus.kWh);
-        }
+        // if (this->kwh_sensor_ != nullptr) {
+        //     this->kwh_sensor_->publish_state(currentStatus.kWh);
+        // }
 
-        if (this->runtime_hours_sensor_ != nullptr) {
-            this->runtime_hours_sensor_->publish_state(currentStatus.runtimeHours);
-        }
+        // if (this->runtime_hours_sensor_ != nullptr) {
+        //     this->runtime_hours_sensor_->publish_state(currentStatus.runtimeHours);
+        // }
 
-        if (this->outside_air_temperature_sensor_ != nullptr) {
-            this->outside_air_temperature_sensor_->publish_state(currentStatus.outsideAirTemperature);
-        }
+        // if (this->outside_air_temperature_sensor_ != nullptr) {
+        //     this->outside_air_temperature_sensor_->publish_state(currentStatus.outsideAirTemperature);
+        // }
     } // else no change
 }
 
@@ -692,25 +703,4 @@ void CN105Climate::checkPowerAndModeSettings(heatpumpSettings& settings, bool up
             this->mode = climate::CLIMATE_MODE_OFF;
         }
     }
-}
-
-void CN105Climate::processBufferedPackets() {
-    if (this->packet_buffer_.status_received && this->packet_buffer_.power_received) {
-        ESP_LOGD(TAG, "Processing buffered packets...");
-
-        // Determine operating status based on stage
-        if (strcmp(this->packet_buffer_.temp_settings.stage, "IDLE") == 0) {
-            this->packet_buffer_.temp_status.operating = false;
-        } else {
-            this->packet_buffer_.temp_status.operating = true;
-        }
-
-        // Update current status
-        this->statusChanged(this->packet_buffer_.temp_status);
-
-        // Reset the buffer for the next cycle
-        this->packet_buffer_.status_received = false;
-        this->packet_buffer_.power_received = false;
-    }
-    this->terminateCycle();
 }
